@@ -49,15 +49,22 @@ async function lookupAgent(agentName: string): Promise<{ name: string; host: str
     if (!response.ok) return null;
 
     const data = await response.json();
-    // API returns agent with host info
+
+    // API returns { agents: [...] }
+    const agents = data.agents || data;
+
+    if (Array.isArray(agents) && agents.length > 0) {
+      const agent = agents.find((a: any) => a.name === agentName);
+      if (agent) {
+        return { name: agent.name, host: agent.hostId || HOST_ID };
+      }
+    }
+
+    // Single agent response
     if (data.name) {
-      return { name: data.name, host: data.host || HOST_ID };
+      return { name: data.name, host: data.hostId || HOST_ID };
     }
-    // API returns array of agents
-    if (Array.isArray(data) && data.length > 0) {
-      const agent = data.find((a: any) => a.name === agentName) || data[0];
-      return { name: agent.name, host: agent.host || HOST_ID };
-    }
+
     return null;
   } catch (error) {
     if (DEBUG) console.error(`[Lookup] Failed to lookup agent ${agentName}:`, error);
@@ -135,9 +142,27 @@ async function checkAgentResponses(): Promise<void> {
 
       if (slackContext && slackContext.channel && slackContext.thread_ts) {
         try {
-          // Format response with agent prefix
-          const agentLabel = msg.from || fromAgent;
-          const formattedResponse = `🤖 *[${agentLabel}]* ${typeof responseText === 'string' ? responseText : JSON.stringify(responseText)}`;
+          // Format response with agent display name
+          // Look up agent to get their label (display name)
+          let agentDisplayName = msg.fromAlias || fromAgent;
+          try {
+            const agentLookup = await lookupAgent(msg.fromAlias || fromAgent);
+            if (agentLookup) {
+              // Fetch full agent info to get label
+              const agentResp = await fetch(`${AIMAESTRO_API}/api/agents?name=${encodeURIComponent(agentLookup.name)}`);
+              if (agentResp.ok) {
+                const agentData = await agentResp.json();
+                const agents = agentData.agents || [];
+                const agent = agents.find((a: any) => a.name === agentLookup.name);
+                if (agent?.label) {
+                  agentDisplayName = agent.label;
+                }
+              }
+            }
+          } catch (e) {
+            // Fall back to alias
+          }
+          const formattedResponse = `🤖 *[${agentDisplayName}]* ${typeof responseText === 'string' ? responseText : JSON.stringify(responseText)}`;
 
           // Send response to Slack
           await app.client.chat.postMessage({
@@ -174,16 +199,32 @@ async function checkAgentResponses(): Promise<void> {
   }
 }
 
+// Get Slack user's display name
+async function getUserDisplayName(userId: string): Promise<string> {
+  try {
+    const result = await app.client.users.info({ user: userId });
+    if (result.ok && result.user) {
+      return result.user.real_name || result.user.name || userId;
+    }
+  } catch (error) {
+    if (DEBUG) console.error(`[Slack] Failed to get user info for ${userId}:`, error);
+  }
+  return userId;
+}
+
 // Process incoming message and route to appropriate agent
 async function routeMessage(
   text: string,
   channel: string,
   thread_ts: string,
-  user: string,
+  userId: string,
   say: (msg: { text: string; thread_ts: string }) => Promise<any>
 ): Promise<void> {
   // Parse @AIM:agent-name routing
   const { agent, message } = parseAgentRouting(text);
+
+  // Get user's display name
+  const userName = await getUserDisplayName(userId);
 
   // Lookup agent to get host info
   const agentInfo = await lookupAgent(agent);
@@ -197,8 +238,8 @@ async function routeMessage(
     return;
   }
 
-  // Send to the target agent
-  await sendToAgent(agentInfo.name, agentInfo.host, message, channel, thread_ts, user);
+  // Send to the target agent with display name
+  await sendToAgent(agentInfo.name, agentInfo.host, message, channel, thread_ts, userName);
 }
 
 // Handle app mentions in channels

@@ -151,10 +151,32 @@ If no `@AIM:` prefix is provided, messages go to the default agent.
 ## How It Works
 
 1. **Incoming**: Slack message → Bridge parses → Sends to AI Maestro agent's inbox
-2. **Processing**: Agent reads message, processes, sends response to `slack-bot` inbox
-3. **Outgoing**: Bridge polls inbox → Finds response → Posts to Slack thread
+2. **Notification**: Inbox watcher detects new message → Notifies agent via tmux
+3. **Processing**: Agent checks inbox, reads message, sends response to `slack-bot` inbox
+4. **Outgoing**: Bridge polls inbox → Finds response → Posts to Slack thread
 
 Messages include Slack context (channel, thread, user) so responses route back correctly.
+
+## Inbox Watcher
+
+The inbox watcher notifies agents when new Slack messages arrive. It injects a notification into the agent's tmux session.
+
+### Running the Watcher
+
+```bash
+# Set the tmux target (session:window.pane)
+TMUX_TARGET="your-agent:0.0" ./slack-inbox-watcher.sh
+
+# Run in background
+TMUX_TARGET="your-agent:0.0" nohup ./slack-inbox-watcher.sh > /tmp/slack-watcher.log 2>&1 &
+```
+
+When a Slack message arrives, the agent sees:
+```
+[SLACK] New message from Juan Pelaez - check your inbox
+```
+
+The agent then uses AI Maestro's messaging skill to read and reply.
 
 ## Configuration
 
@@ -212,6 +234,8 @@ sudo systemctl start aimaestro-slack-bridge
 - [x] Thread-based responses
 - [x] Agent routing via `@AIM:agent-name`
 - [x] Cross-host agent discovery
+- [x] Inbox watcher for agent notifications
+- [x] Agent display names in responses
 - [ ] Multi-workspace support
 - [ ] File/image attachments
 - [ ] Slash commands
