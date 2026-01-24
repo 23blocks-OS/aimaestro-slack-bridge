@@ -1,52 +1,22 @@
 # Slack-AI Maestro Bridge - Backlog
 
-## Agent Routing via @AIM:agent-name
+## ✅ Agent Routing via @AIM:agent-name (COMPLETED)
 
-### Problem
-Currently the bridge only routes messages to Lola (`pas-lola`). Users should be able to message any AI Maestro agent across the network from Slack.
+The bridge now supports routing to any agent in the AI Maestro mesh network using the `@AIM:agent-name` convention.
 
-### Solution
-Parse messages for `@AIM:agent-name` convention and route to the specified agent.
-
-### Convention
+### Usage
 ```
-@AIM:agent-name message here
+@AIM:backend-api check the server status
+@AIM:graph-query find all API endpoints
 ```
 
-### Behavior
-
-| Input | Routes To | Notes |
-|-------|-----------|-------|
-| `@AIM:backend-api check status` | backend-api | Explicit routing |
-| `@AIM:crm-api sync data` | crm-api | Explicit routing |
-| `Hey, how are things?` | pas-lola | Default (no @AIM) |
-| `@AIM:unknown-agent hello` | Error message | Agent not found |
+Messages without `@AIM:` prefix route to the default agent (configurable via `DEFAULT_AGENT` env var).
 
 ### Response Format
-Prefix responses with the responding agent's name for clarity:
+Responses are prefixed with the agent name:
 ```
-User: "@AIM:backend-api check the server"
-Bot:  "🤖 [backend-api] Server is healthy, all endpoints responding."
+🤖 [backend-api] Server is healthy, all endpoints responding.
 ```
-
-### Implementation
-
-1. **Parse incoming message** for `@AIM:(\w+[-\w]*)` pattern
-2. **Validate agent exists** via AI Maestro API (`/api/agents`)
-3. **Route message** to target agent (uses existing smart lookup for cross-host)
-4. **On response**, prefix with agent name: `🤖 [agent-name] response`
-5. **Default to Lola** if no `@AIM:` found
-
-### Edge Cases
-- Agent not found → Reply with error: "Agent 'xyz' not found. Available: ..."
-- Multiple @AIM mentions → Route to first one? Or error?
-- Agent on different host → Smart lookup handles this already
-
-### Files to Modify
-- `src/slack-maestro-bridge.ts`: Add routing logic, update response formatting
-
-### Estimate
-~2-3 hours
 
 ---
 
@@ -79,7 +49,7 @@ Currently the bridge connects to a single Slack workspace. Each workspace requir
 ## Future Improvements
 
 ### High Priority
-- [ ] **Agent routing via @AIM:agent-name** (see above) ⭐
+- [x] **Agent routing via @AIM:agent-name** ✅
 - [ ] Multi-workspace support (see above)
 - [ ] PM2 or systemd service for persistent running
 - [ ] Better error handling for rate limits (429)

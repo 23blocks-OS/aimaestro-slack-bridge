@@ -8,10 +8,11 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN!;
 const SLACK_APP_TOKEN = process.env.SLACK_APP_TOKEN!;
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET!;
 
-const AIMAESTRO_API = 'http://127.0.0.1:23000';
-const LOLA_AGENT = 'pas-lola';
+const AIMAESTRO_API = process.env.AIMAESTRO_API || 'http://127.0.0.1:23000';
+const DEFAULT_AGENT = process.env.DEFAULT_AGENT || 'pas-lola';
 const SLACK_BOT_AGENT = 'slack-bot';
-const HOST_ID = 'mini-lola';
+const HOST_ID = process.env.HOST_ID || 'mini-lola';
+const DEBUG = process.env.DEBUG === 'true';
 
 // Initialize Slack app
 const app = new App({
@@ -21,13 +22,63 @@ const app = new App({
   socketMode: true,
 });
 
-// Send message to Lola via AI Maestro API
-async function sendToLola(text: string, channel: string, thread_ts: string, user: string): Promise<void> {
+// Parse @AIM:agent-name from message text
+// Returns { agent: string, message: string }
+function parseAgentRouting(text: string): { agent: string; message: string } {
+  // Pattern: @AIM:agent-name at the start of message
+  const match = text.match(/^@AIM:([a-zA-Z0-9_-]+)\s*(.*)/i);
+
+  if (match) {
+    return {
+      agent: match[1],
+      message: match[2].trim() || '(no message)'
+    };
+  }
+
+  // No @AIM prefix, use default agent
+  return {
+    agent: DEFAULT_AGENT,
+    message: text
+  };
+}
+
+// Lookup agent in AI Maestro to get host info
+async function lookupAgent(agentName: string): Promise<{ name: string; host: string } | null> {
+  try {
+    const response = await fetch(`${AIMAESTRO_API}/api/agents?name=${encodeURIComponent(agentName)}`);
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    // API returns agent with host info
+    if (data.name) {
+      return { name: data.name, host: data.host || HOST_ID };
+    }
+    // API returns array of agents
+    if (Array.isArray(data) && data.length > 0) {
+      const agent = data.find((a: any) => a.name === agentName) || data[0];
+      return { name: agent.name, host: agent.host || HOST_ID };
+    }
+    return null;
+  } catch (error) {
+    if (DEBUG) console.error(`[Lookup] Failed to lookup agent ${agentName}:`, error);
+    return null;
+  }
+}
+
+// Send message to an agent via AI Maestro API
+async function sendToAgent(
+  targetAgent: string,
+  targetHost: string,
+  text: string,
+  channel: string,
+  thread_ts: string,
+  user: string
+): Promise<void> {
   const payload = {
     from: SLACK_BOT_AGENT,
     fromHost: HOST_ID,
-    to: LOLA_AGENT,
-    toHost: HOST_ID,
+    to: targetAgent,
+    toHost: targetHost,
     subject: `Slack: Message from ${user}`,
     priority: 'normal',
     content: {
@@ -49,14 +100,14 @@ async function sendToLola(text: string, channel: string, thread_ts: string, user
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Failed to send to Lola: ${error}`);
+    throw new Error(`Failed to send to ${targetAgent}: ${error}`);
   }
 
-  console.log(`[→ Lola] Message sent from ${user}: ${text.substring(0, 50)}...`);
+  console.log(`[→ ${targetAgent}@${targetHost}] Message from ${user}: ${text.substring(0, 50)}...`);
 }
 
-// Check for responses from Lola
-async function checkLolaResponses(): Promise<void> {
+// Check for responses from ANY agent
+async function checkAgentResponses(): Promise<void> {
   try {
     const response = await fetch(
       `${AIMAESTRO_API}/api/messages?agent=${SLACK_BOT_AGENT}&box=inbox&status=unread`
@@ -68,10 +119,8 @@ async function checkLolaResponses(): Promise<void> {
     const messages = data.messages || [];
 
     for (const msgSummary of messages) {
-      // Only process messages from Lola
-      if (msgSummary.from !== LOLA_AGENT && msgSummary.fromAlias !== LOLA_AGENT) continue;
-
-      console.log(`[← Lola] Response received: ${msgSummary.subject}`);
+      const fromAgent = msgSummary.from || msgSummary.fromAlias || 'unknown';
+      console.log(`[← ${fromAgent}] Response received: ${msgSummary.subject}`);
 
       // Fetch full message to get content (list only returns preview)
       const fullMsgResponse = await fetch(
@@ -86,14 +135,18 @@ async function checkLolaResponses(): Promise<void> {
 
       if (slackContext && slackContext.channel && slackContext.thread_ts) {
         try {
+          // Format response with agent prefix
+          const agentLabel = msg.from || fromAgent;
+          const formattedResponse = `🤖 *[${agentLabel}]* ${typeof responseText === 'string' ? responseText : JSON.stringify(responseText)}`;
+
           // Send response to Slack
           await app.client.chat.postMessage({
             channel: slackContext.channel,
             thread_ts: slackContext.thread_ts,
-            text: typeof responseText === 'string' ? responseText : JSON.stringify(responseText),
+            text: formattedResponse,
           });
 
-          console.log(`[→ Slack] Response sent to ${slackContext.channel}/${slackContext.thread_ts}`);
+          console.log(`[→ Slack] Response from ${agentLabel} sent to ${slackContext.channel}/${slackContext.thread_ts}`);
 
           // Add checkmark reaction
           await app.client.reactions.add({
@@ -106,7 +159,7 @@ async function checkLolaResponses(): Promise<void> {
           console.error('Failed to send to Slack:', slackError);
         }
       } else {
-        console.log(`[← Lola] Message has no Slack context, skipping:`, msg.subject);
+        console.log(`[← ${fromAgent}] Message has no Slack context, skipping:`, msg.subject);
       }
 
       // Mark message as read
@@ -117,7 +170,35 @@ async function checkLolaResponses(): Promise<void> {
     }
   } catch (error) {
     // Silently ignore polling errors (API might be temporarily unavailable)
+    if (DEBUG) console.error('[Poll] Error:', error);
   }
+}
+
+// Process incoming message and route to appropriate agent
+async function routeMessage(
+  text: string,
+  channel: string,
+  thread_ts: string,
+  user: string,
+  say: (msg: { text: string; thread_ts: string }) => Promise<any>
+): Promise<void> {
+  // Parse @AIM:agent-name routing
+  const { agent, message } = parseAgentRouting(text);
+
+  // Lookup agent to get host info
+  const agentInfo = await lookupAgent(agent);
+
+  if (!agentInfo) {
+    // Agent not found - notify user
+    await say({
+      text: `❌ Agent \`${agent}\` not found in the network. Use \`@AIM:agent-name message\` to route to a specific agent.`,
+      thread_ts
+    });
+    return;
+  }
+
+  // Send to the target agent
+  await sendToAgent(agentInfo.name, agentInfo.host, message, channel, thread_ts, user);
 }
 
 // Handle app mentions in channels
@@ -137,12 +218,12 @@ app.event('app_mention', async ({ event, say }) => {
       name: 'eyes',
     });
 
-    // Send to Lola
-    await sendToLola(text, channel, thread_ts, user);
+    // Route message to appropriate agent
+    await routeMessage(text, channel, thread_ts, user, say);
 
   } catch (error) {
-    console.error('Error forwarding to Lola:', error);
-    await say({ text: '❌ Failed to reach Lola. Please try again.', thread_ts });
+    console.error('Error routing message:', error);
+    await say({ text: '❌ Failed to route message. Please try again.', thread_ts });
   }
 });
 
@@ -171,12 +252,12 @@ app.event('message', async ({ event, say }) => {
       name: 'eyes',
     });
 
-    // Send to Lola
-    await sendToLola(text, channel, thread_ts, user);
+    // Route message to appropriate agent
+    await routeMessage(text, channel, thread_ts, user, say);
 
   } catch (error) {
-    console.error('Error forwarding to Lola:', error);
-    await say({ text: '❌ Failed to reach Lola. Please try again.', thread_ts });
+    console.error('Error routing message:', error);
+    await say({ text: '❌ Failed to route message. Please try again.', thread_ts });
   }
 });
 
@@ -187,30 +268,34 @@ app.event('member_joined_channel', async ({ event }) => {
 
     await app.client.chat.postMessage({
       channel: event.channel,
-      text: `👋 Hi! I'm Lola, Juan's Chief of Staff. Mention me with @Lola to chat!`,
+      text: `👋 Hi! I'm the AI Maestro gateway. Message me to reach agents on the network.\n\n` +
+            `• DM or @mention me to talk to the default agent\n` +
+            `• Use \`@AIM:agent-name\` to route to a specific agent`,
     });
   }
 });
 
 // Main
 async function main() {
-  console.log('🤖 Slack-AI Maestro Bridge starting...');
-  console.log(`   Lola agent: ${LOLA_AGENT}`);
+  console.log('🤖 AI Maestro Slack Bridge starting...');
+  console.log(`   Default agent: ${DEFAULT_AGENT}`);
   console.log(`   Bot agent: ${SLACK_BOT_AGENT}`);
+  console.log(`   Host ID: ${HOST_ID}`);
   console.log(`   AI Maestro API: ${AIMAESTRO_API}`);
 
   // Start the Slack app
   await app.start();
   console.log('⚡️ Connected to Slack (Socket Mode)');
 
-  // Poll for Lola's responses every 2 seconds
-  setInterval(checkLolaResponses, 2000);
-  console.log('👀 Watching for Lola\'s responses...');
+  // Poll for agent responses every 2 seconds
+  setInterval(checkAgentResponses, 2000);
+  console.log('👀 Watching for agent responses...');
 
   console.log('');
   console.log('✅ Bridge ready!');
   console.log('   - DM the bot or @mention in channels');
-  console.log('   - Messages forwarded to Lola via AI Maestro');
+  console.log('   - Use @AIM:agent-name to route to specific agents');
+  console.log('   - Messages forwarded to AI Maestro network');
   console.log('   - Responses sent back to Slack');
 }
 

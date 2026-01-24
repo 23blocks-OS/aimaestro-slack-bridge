@@ -130,12 +130,23 @@ Send a direct message to the bot in Slack. It will be forwarded to your default 
 @AI Maestro what's the status of the project?
 ```
 
-### Route to Specific Agent *(coming soon)*
+### Route to Specific Agent
+
+Use `@AIM:agent-name` to route messages to any agent in the mesh network:
 
 ```
 @AIM:backend-api check the server health
 @AIM:frontend-dev review the CSS changes
+@AIM:graph-query find all API endpoints
 ```
+
+The bridge will:
+1. Parse the `@AIM:agent-name` prefix
+2. Look up the agent in AI Maestro (including cross-host agents)
+3. Route the message to that agent
+4. Return the response prefixed with `🤖 [agent-name]`
+
+If no `@AIM:` prefix is provided, messages go to the default agent.
 
 ## How It Works
 
@@ -199,7 +210,8 @@ sudo systemctl start aimaestro-slack-bridge
 - [x] Basic Slack ↔ AI Maestro messaging
 - [x] DM and mention support
 - [x] Thread-based responses
-- [ ] Agent routing via `@AIM:agent-name`
+- [x] Agent routing via `@AIM:agent-name`
+- [x] Cross-host agent discovery
 - [ ] Multi-workspace support
 - [ ] File/image attachments
 - [ ] Slash commands
