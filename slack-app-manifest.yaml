@@ -1,0 +1,29 @@
+display_information:
+  name: AI Maestro
+  description: Bridge to AI Maestro agents
+  background_color: "#4A154B"
+features:
+  bot_user:
+    display_name: AI Maestro
+    always_online: true
+oauth_config:
+  scopes:
+    bot:
+      - app_mentions:read
+      - channels:history
+      - channels:read
+      - chat:write
+      - chat:write.public
+      - im:history
+      - im:read
+      - im:write
+      - users:read
+      - reactions:read
+      - reactions:write
+settings:
+  event_subscriptions:
+    bot_events:
+      - app_mention
+      - message.im
+      - member_joined_channel
+  socket_mode_enabled: true
