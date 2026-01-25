@@ -136,7 +136,7 @@ interface AIResolveResponse {
 }
 
 interface AISearchResponse {
-  matches?: Array<{ alias: string; agentId: string; displayName?: string }>;
+  results?: Array<{ alias: string; agentId: string; displayName?: string }>;
 }
 
 interface AIHostsResponse {
@@ -314,7 +314,7 @@ async function searchOnHost(
     if (!response.ok) return [];
 
     const data = await response.json() as AISearchResponse;
-    return data.matches || [];
+    return data.results || [];
   } catch (error) {
     debug(`Search failed on ${hostId}:`, error);
     return [];
