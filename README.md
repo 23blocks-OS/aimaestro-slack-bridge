@@ -14,13 +14,15 @@
 
 | Feature | AI Maestro Slack Bridge | Official Claude for Slack |
 |---------|------------------------|---------------------------|
-| **API Costs** | **Zero** - connects to existing agents | Uses Claude API (counts against usage) |
+| **API Usage** | **No extra calls** - uses your running agents | Creates new API sessions per message |
 | **Agent Persistence** | Connects to **running** Claude Code sessions | Starts new sessions each time |
 | **Context Retention** | Agents keep full project context | Fresh context per conversation |
 | **Hosting** | Your machines (local/cloud) | Anthropic's cloud (claude.com/code) |
 | **Claude Code Skills** | Full access to custom skills & hooks | Limited to web capabilities |
 | **Multi-Agent** | Route to any agent in your network | Single Claude instance |
-| **Cost** | Free & open source | Requires Pro/Team/Enterprise plan |
+| **Bridge Cost** | Free & open source | Included with Pro/Team/Enterprise |
+
+*Note: You still need a Claude subscription (Pro/Max) or API credits to run your Claude Code agents. The bridge itself doesn't make additional API calls - it routes messages to agents you're already running.*
 
 **Bottom line**: Official Claude for Slack creates *new* Claude sessions via API. We connect to your *existing* Claude Code agents - the ones already running with your codebase loaded, your skills installed, and your context intact.
 
@@ -33,7 +35,7 @@ Your team wants to interact with Claude Code agents, but:
 - **Not everyone has terminal access** - PMs, designers, and stakeholders can't use CLI tools
 - **Context switching is expensive** - Developers shouldn't leave Slack to query agents
 - **Claude Code agents are siloed** - Each runs in its own tmux session, invisible to non-developers
-- **API costs add up** - Every new Claude conversation costs money
+- **Extra API calls** - Official Slack apps create new sessions, consuming more of your quota
 - **No persistent context** - Official Slack apps start fresh each time
 
 ## The Solution
@@ -61,7 +63,7 @@ Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 
 | Feature | Description |
 |---------|-------------|
-| **Zero API Costs** | Connects to running agents - no new Claude API calls |
+| **No Extra API Calls** | Routes to running agents - no additional Claude API consumption |
 | **Full Context** | Agents keep your codebase, skills, and conversation history |
 | **Agent Routing** | Target specific agents with `@AIM:agent-name` syntax |
 | **Skills & Hooks** | Your Claude Code skills work through Slack |
@@ -76,7 +78,7 @@ Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 │                 │      │                  │      │                 │
 │  @AIM:backend   │─────▶│  Parse & Route   │─────▶│  Agent Inbox    │
 │  "check health" │      │                  │      │                 │
-│                 │      │  (No API calls!) │      │  ┌───────────┐  │
+│                 │      │  (Routes only!)  │      │  ┌───────────┐  │
 │  ◀─────────────────────│  Poll Response   │◀─────│  │Claude Code│  │
 │  🤖 [backend]   │      │                  │      │  │  Agent    │  │
 │  "All healthy"  │      │                  │      │  │ (running) │  │
