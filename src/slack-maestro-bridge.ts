@@ -215,12 +215,20 @@ function debug(message: string, ...args: unknown[]): void {
 }
 
 function parseAgentRouting(text: string): { agent: string; message: string } {
-  const match = text.match(/^@AIM:([a-zA-Z0-9_-]+)\s*(.*)/i);
+  // Find @AIM:agent-name anywhere in the message
+  const match = text.match(/@AIM:([a-zA-Z0-9_-]+)/i);
 
   if (match) {
+    // Remove the @AIM:agent-name from the message and clean up
+    const message = text
+      .replace(match[0], '')  // Remove the @AIM:agent part
+      .replace(/\s+/g, ' ')   // Normalize whitespace
+      .replace(/^[,.\s]+/, '') // Remove leading punctuation/whitespace
+      .trim();
+
     return {
       agent: match[1],
-      message: match[2].trim() || '(no message)'
+      message: message || '(no message)'
     };
   }
 
