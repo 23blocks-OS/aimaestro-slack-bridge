@@ -1,26 +1,72 @@
 # AI Maestro Slack Bridge
 
-Connect your Slack workspace to [AI Maestro](https://github.com/23blocks-OS/ai-maestro) agents. Send messages from Slack to AI agents and receive responses in threads.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![AI Maestro](https://img.shields.io/badge/AI%20Maestro-Compatible-purple.svg)](https://github.com/23blocks-OS/ai-maestro)
+
+> **Connect your team to AI agents through Slack** - No terminal access required.
+
+---
+
+## The Problem
+
+Your team wants to interact with AI coding agents, but:
+
+- **Not everyone has terminal access** - PMs, designers, and stakeholders can't use CLI tools
+- **Context switching is expensive** - Developers shouldn't leave Slack to ask agents questions
+- **AI agents are siloed** - Each agent runs in its own tmux session, inaccessible to non-developers
+- **No audit trail** - Agent conversations happen in terminals with no team visibility
+
+## The Solution
+
+**AI Maestro Slack Bridge** connects your Slack workspace directly to your AI Maestro agents:
+
+```
+Team Member (Slack)  →  "@AIM:backend-api check server health"
+                                    ↓
+                           AI Maestro Agent
+                                    ↓
+Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
+```
+
+**Now anyone on your team can:**
+- Ask agents questions via DM or channel mentions
+- Route to specific agents with `@AIM:agent-name` syntax
+- Get responses in threaded conversations
+- Access agents across your entire mesh network
+
+---
 
 ## Features
 
-- **Slack ↔ AI Maestro**: Bridge messages between Slack and AI Maestro agents
-- **DM & Mentions**: Message agents via DM or @mention in channels
-- **Thread Support**: Responses delivered to the original Slack thread
-- **Multi-Agent Routing** *(coming soon)*: Route to specific agents with `@AIM:agent-name`
-- **Cross-Host**: Route messages to agents on any host in your AI Maestro network
+| Feature | Description |
+|---------|-------------|
+| **Bidirectional Messaging** | Send messages to agents, receive responses in Slack threads |
+| **Agent Routing** | Target specific agents with `@AIM:agent-name` syntax |
+| **DM & Mentions** | Message via direct message or @mention in channels |
+| **Cross-Host Discovery** | Route to agents on any host in your AI Maestro network |
+| **Thread Context** | Conversations stay organized in Slack threads |
+| **Real-time Notifications** | Agents get notified instantly via tmux |
 
 ## Architecture
 
 ```
-Slack Message → Slack Bridge → AI Maestro API → Target Agent
-                                                      ↓
-Slack Thread  ← Slack Bridge ← AI Maestro API ← Agent Response
+┌─────────────────┐      ┌──────────────────┐      ┌─────────────────┐
+│   Slack User    │      │   Slack Bridge   │      │   AI Maestro    │
+│                 │      │                  │      │                 │
+│  @AIM:backend   │─────▶│  Parse & Route   │─────▶│  Agent Inbox    │
+│  "check health" │      │                  │      │                 │
+│                 │      │                  │      │  ┌───────────┐  │
+│  ◀─────────────────────│  Poll Response   │◀─────│  │  Agent    │  │
+│  🤖 [backend]   │      │                  │      │  │  Process  │  │
+│  "All healthy"  │      │                  │      │  └───────────┘  │
+└─────────────────┘      └──────────────────┘      └─────────────────┘
 ```
 
 ## Prerequisites
 
-- [AI Maestro](https://github.com/23blocks-OS/ai-maestro) running on your network
+- [AI Maestro](https://github.com/23blocks-OS/ai-maestro) running (v0.18.0+)
 - Node.js 18+
 - A Slack workspace with admin access
 
@@ -31,46 +77,12 @@ Slack Thread  ← Slack Bridge ← AI Maestro API ← Agent Response
 1. Go to [api.slack.com/apps](https://api.slack.com/apps)
 2. Click **Create New App** → **From manifest**
 3. Select your workspace
-4. Paste this manifest:
-
-```yaml
-display_information:
-  name: AI Maestro
-  description: Bridge to AI Maestro agents
-  background_color: "#4A154B"
-features:
-  bot_user:
-    display_name: AI Maestro
-    always_online: true
-oauth_config:
-  scopes:
-    bot:
-      - app_mentions:read
-      - channels:history
-      - channels:read
-      - chat:write
-      - chat:write.public
-      - im:history
-      - im:read
-      - im:write
-      - users:read
-      - reactions:read
-      - reactions:write
-settings:
-  event_subscriptions:
-    bot_events:
-      - app_mention
-      - message.im
-      - member_joined_channel
-  socket_mode_enabled: true
-```
-
-5. Click **Create**
-6. Install the app to your workspace
+4. Paste the manifest from [`slack-app-manifest.yaml`](./slack-app-manifest.yaml)
+5. Click **Create** and install to your workspace
 
 ### 2. Get Your Tokens
 
-From your Slack app settings, collect:
+From your Slack app settings:
 
 | Token | Location | Format |
 |-------|----------|--------|
@@ -93,14 +105,11 @@ Edit `.env`:
 SLACK_BOT_TOKEN=xoxb-your-bot-token
 SLACK_APP_TOKEN=xapp-your-app-token
 SLACK_SIGNING_SECRET=your-signing-secret
-
-# Optional: Base directory for agent working directories
-BASE_DIRECTORY=/home/user/projects
+AIMAESTRO_API=http://127.0.0.1:23000
+DEFAULT_AGENT=your-default-agent
 ```
 
 ### 4. Register the Bridge Agent
-
-Register `slack-bot` as an agent in AI Maestro:
 
 ```bash
 curl -X POST http://127.0.0.1:23000/api/agents \
@@ -111,88 +120,44 @@ curl -X POST http://127.0.0.1:23000/api/agents \
 ### 5. Run
 
 ```bash
-# Development (with hot reload)
+# Development
 npm run dev
 
 # Production
 npm start
 ```
 
-## Usage
+## Usage Examples
 
 ### DM the Bot
-
-Send a direct message to the bot in Slack. It will be forwarded to your default AI Maestro agent.
+Send a direct message to **AI Maestro** in Slack.
 
 ### Mention in Channels
-
 ```
 @AI Maestro what's the status of the project?
 ```
 
-### Route to Specific Agent
-
-Use `@AIM:agent-name` to route messages to any agent in the mesh network:
-
+### Route to Specific Agents
 ```
 @AIM:backend-api check the server health
 @AIM:frontend-dev review the CSS changes
-@AIM:graph-query find all API endpoints
+@AIM:data-analyst run the daily metrics report
 ```
-
-The bridge will:
-1. Parse the `@AIM:agent-name` prefix
-2. Look up the agent in AI Maestro (including cross-host agents)
-3. Route the message to that agent
-4. Return the response prefixed with `🤖 [agent-name]`
-
-If no `@AIM:` prefix is provided, messages go to the default agent.
-
-## How It Works
-
-1. **Incoming**: Slack message → Bridge parses → Sends to AI Maestro agent's inbox
-2. **Notification**: Inbox watcher detects new message → Notifies agent via tmux
-3. **Processing**: Agent checks inbox, reads message, sends response to `slack-bot` inbox
-4. **Outgoing**: Bridge polls inbox → Finds response → Posts to Slack thread
-
-Messages include Slack context (channel, thread, user) so responses route back correctly.
-
-## Inbox Watcher
-
-The inbox watcher notifies agents when new Slack messages arrive. It injects a notification into the agent's tmux session.
-
-### Running the Watcher
-
-```bash
-# Set the tmux target (session:window.pane)
-TMUX_TARGET="your-agent:0.0" ./slack-inbox-watcher.sh
-
-# Run in background
-TMUX_TARGET="your-agent:0.0" nohup ./slack-inbox-watcher.sh > /tmp/slack-watcher.log 2>&1 &
-```
-
-When a Slack message arrives, the agent sees:
-```
-[SLACK] New message from Juan Pelaez - check your inbox
-```
-
-The agent then uses AI Maestro's messaging skill to read and reply.
 
 ## Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `SLACK_BOT_TOKEN` | Yes | Bot User OAuth Token (`xoxb-...`) |
-| `SLACK_APP_TOKEN` | Yes | App-Level Token (`xapp-...`) |
-| `SLACK_SIGNING_SECRET` | Yes | Signing secret for verification |
-| `AIMAESTRO_API` | No | AI Maestro API URL (default: `http://127.0.0.1:23000`) |
-| `DEFAULT_AGENT` | No | Default agent to receive messages |
-| `BASE_DIRECTORY` | No | Base path for relative directories |
-| `DEBUG` | No | Enable debug logging (`true`) |
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SLACK_BOT_TOKEN` | Yes | - | Bot User OAuth Token |
+| `SLACK_APP_TOKEN` | Yes | - | App-Level Token |
+| `SLACK_SIGNING_SECRET` | Yes | - | Signing secret |
+| `AIMAESTRO_API` | No | `http://127.0.0.1:23000` | AI Maestro API URL |
+| `DEFAULT_AGENT` | No | - | Default agent for messages |
+| `DEBUG` | No | `false` | Enable debug logging |
 
-## Running as a Service
+## Production Deployment
 
-### Using PM2
+### Using PM2 (Recommended)
 
 ```bash
 npm install -g pm2
@@ -203,54 +168,57 @@ pm2 startup
 
 ### Using systemd
 
-Create `/etc/systemd/system/aimaestro-slack-bridge.service`:
-
-```ini
-[Unit]
-Description=AI Maestro Slack Bridge
-After=network.target
-
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/aimaestro-slack-bridge
-ExecStart=/usr/bin/npm start
-Restart=always
-EnvironmentFile=/path/to/aimaestro-slack-bridge/.env
-
-[Install]
-WantedBy=multi-user.target
-```
-
 ```bash
+# See docs for full systemd configuration
 sudo systemctl enable aimaestro-slack-bridge
 sudo systemctl start aimaestro-slack-bridge
 ```
 
 ## Roadmap
 
-- [x] Basic Slack ↔ AI Maestro messaging
-- [x] DM and mention support
+- [x] Slack ↔ AI Maestro messaging
+- [x] DM and @mention support
 - [x] Thread-based responses
-- [x] Agent routing via `@AIM:agent-name`
+- [x] Agent routing (`@AIM:agent-name`)
 - [x] Cross-host agent discovery
-- [x] Inbox watcher for agent notifications
-- [x] Agent display names in responses
+- [x] Real-time agent notifications
 - [ ] Multi-workspace support
 - [ ] File/image attachments
-- [ ] Slash commands
-- [ ] Rate limit handling
+- [ ] Slash commands (`/aim`)
+- [ ] Reaction-based commands
 
 See [BACKLOG.md](./BACKLOG.md) for detailed plans.
 
+## Security
+
+See [SECURITY.md](./SECURITY.md) for security policy and reporting vulnerabilities.
+
 ## Contributing
 
-Contributions welcome! Please feel free to submit a Pull Request.
+Contributions welcome! Please read our contributing guidelines before submitting PRs.
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## Credits
 
 Based on [claude-code-slack-bot](https://github.com/mpociot/claude-code-slack-bot) by Marcel Pociot.
 
+## Related Projects
+
+- [AI Maestro](https://github.com/23blocks-OS/ai-maestro) - The main dashboard for managing AI coding agents
+- [AI Maestro Documentation](https://23blocks-os.github.io/ai-maestro/) - Full documentation
+
 ## License
 
 MIT - see [LICENSE](./LICENSE)
+
+---
+
+<p align="center">
+  <b>Made with ❤️ by <a href="https://github.com/23blocks-OS">23blocks</a></b><br>
+  <sub>Empowering teams to collaborate with AI agents</sub>
+</p>
