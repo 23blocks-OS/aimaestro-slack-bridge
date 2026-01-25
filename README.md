@@ -3,38 +3,57 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-orange.svg)](https://claude.ai/code)
 [![AI Maestro](https://img.shields.io/badge/AI%20Maestro-Compatible-purple.svg)](https://github.com/23blocks-OS/ai-maestro)
 
-> **Connect your team to AI agents through Slack** - No terminal access required.
+> **Connect your Slack workspace to your Claude Code agents** - Supercharge your team's AI coding workflow without additional API costs.
+
+---
+
+## How is this different from Claude for Slack?
+
+| Feature | AI Maestro Slack Bridge | Official Claude for Slack |
+|---------|------------------------|---------------------------|
+| **API Costs** | **Zero** - connects to existing agents | Uses Claude API (counts against usage) |
+| **Agent Persistence** | Connects to **running** Claude Code sessions | Starts new sessions each time |
+| **Context Retention** | Agents keep full project context | Fresh context per conversation |
+| **Hosting** | Your machines (local/cloud) | Anthropic's cloud (claude.com/code) |
+| **Claude Code Skills** | Full access to custom skills & hooks | Limited to web capabilities |
+| **Multi-Agent** | Route to any agent in your network | Single Claude instance |
+| **Cost** | Free & open source | Requires Pro/Team/Enterprise plan |
+
+**Bottom line**: Official Claude for Slack creates *new* Claude sessions via API. We connect to your *existing* Claude Code agents - the ones already running with your codebase loaded, your skills installed, and your context intact.
 
 ---
 
 ## The Problem
 
-Your team wants to interact with AI coding agents, but:
+Your team wants to interact with Claude Code agents, but:
 
 - **Not everyone has terminal access** - PMs, designers, and stakeholders can't use CLI tools
-- **Context switching is expensive** - Developers shouldn't leave Slack to ask agents questions
-- **AI agents are siloed** - Each agent runs in its own tmux session, inaccessible to non-developers
-- **No audit trail** - Agent conversations happen in terminals with no team visibility
+- **Context switching is expensive** - Developers shouldn't leave Slack to query agents
+- **Claude Code agents are siloed** - Each runs in its own tmux session, invisible to non-developers
+- **API costs add up** - Every new Claude conversation costs money
+- **No persistent context** - Official Slack apps start fresh each time
 
 ## The Solution
 
-**AI Maestro Slack Bridge** connects your Slack workspace directly to your AI Maestro agents:
+**AI Maestro Slack Bridge** connects Slack directly to your running Claude Code agents:
 
 ```
 Team Member (Slack)  →  "@AIM:backend-api check server health"
                                     ↓
-                           AI Maestro Agent
+                         Your Running Claude Code Agent
+                         (with full project context intact)
                                     ↓
 Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 ```
 
-**Now anyone on your team can:**
-- Ask agents questions via DM or channel mentions
-- Route to specific agents with `@AIM:agent-name` syntax
-- Get responses in threaded conversations
-- Access agents across your entire mesh network
+**Your Claude Code superpowers, now in Slack:**
+- Custom skills and hooks work seamlessly
+- Agents retain full codebase context
+- No additional API calls or costs
+- Route to any agent across your mesh network
 
 ---
 
@@ -42,12 +61,12 @@ Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 
 | Feature | Description |
 |---------|-------------|
-| **Bidirectional Messaging** | Send messages to agents, receive responses in Slack threads |
+| **Zero API Costs** | Connects to running agents - no new Claude API calls |
+| **Full Context** | Agents keep your codebase, skills, and conversation history |
 | **Agent Routing** | Target specific agents with `@AIM:agent-name` syntax |
-| **DM & Mentions** | Message via direct message or @mention in channels |
-| **Cross-Host Discovery** | Route to agents on any host in your AI Maestro network |
-| **Thread Context** | Conversations stay organized in Slack threads |
-| **Real-time Notifications** | Agents get notified instantly via tmux |
+| **Skills & Hooks** | Your Claude Code skills work through Slack |
+| **Cross-Host** | Route to agents on any machine in your network |
+| **Thread Responses** | Conversations stay organized in Slack threads |
 
 ## Architecture
 
@@ -57,18 +76,20 @@ Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 │                 │      │                  │      │                 │
 │  @AIM:backend   │─────▶│  Parse & Route   │─────▶│  Agent Inbox    │
 │  "check health" │      │                  │      │                 │
-│                 │      │                  │      │  ┌───────────┐  │
-│  ◀─────────────────────│  Poll Response   │◀─────│  │  Agent    │  │
-│  🤖 [backend]   │      │                  │      │  │  Process  │  │
-│  "All healthy"  │      │                  │      │  └───────────┘  │
-└─────────────────┘      └──────────────────┘      └─────────────────┘
+│                 │      │  (No API calls!) │      │  ┌───────────┐  │
+│  ◀─────────────────────│  Poll Response   │◀─────│  │Claude Code│  │
+│  🤖 [backend]   │      │                  │      │  │  Agent    │  │
+│  "All healthy"  │      │                  │      │  │ (running) │  │
+└─────────────────┘      └──────────────────┘      │  └───────────┘  │
+                                                   └─────────────────┘
 ```
 
 ## Prerequisites
 
 - [AI Maestro](https://github.com/23blocks-OS/ai-maestro) running (v0.18.0+)
+- Claude Code agents running in tmux sessions
 - Node.js 18+
-- A Slack workspace with admin access
+- Slack workspace with admin access
 
 ## Quick Start
 
@@ -137,7 +158,7 @@ Send a direct message to **AI Maestro** in Slack.
 @AI Maestro what's the status of the project?
 ```
 
-### Route to Specific Agents
+### Route to Specific Claude Code Agents
 ```
 @AIM:backend-api check the server health
 @AIM:frontend-dev review the CSS changes
@@ -174,9 +195,17 @@ sudo systemctl enable aimaestro-slack-bridge
 sudo systemctl start aimaestro-slack-bridge
 ```
 
+## Why Use This Over Official Claude for Slack?
+
+1. **Cost**: Zero additional API costs - your agents are already running
+2. **Context**: Agents keep full project context, skills, and hooks
+3. **Control**: Self-hosted, your data stays on your infrastructure
+4. **Flexibility**: Route to any agent, use custom skills, integrate with your workflow
+5. **Multi-Agent**: Your whole team of specialized agents, accessible from Slack
+
 ## Roadmap
 
-- [x] Slack ↔ AI Maestro messaging
+- [x] Slack ↔ Claude Code agent messaging
 - [x] DM and @mention support
 - [x] Thread-based responses
 - [x] Agent routing (`@AIM:agent-name`)
@@ -203,13 +232,17 @@ Contributions welcome! Please read our contributing guidelines before submitting
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## Keywords
+
+Claude Code, Slack integration, AI coding assistant, Claude Code skills, Claude Code hooks, Anthropic Claude, coding agents, AI pair programming, developer tools, team collaboration, Claude CLI, tmux, AI Maestro
+
 ## Credits
 
 Based on [claude-code-slack-bot](https://github.com/mpociot/claude-code-slack-bot) by Marcel Pociot.
 
 ## Related Projects
 
-- [AI Maestro](https://github.com/23blocks-OS/ai-maestro) - The main dashboard for managing AI coding agents
+- [AI Maestro](https://github.com/23blocks-OS/ai-maestro) - Dashboard for managing Claude Code agents
 - [AI Maestro Documentation](https://23blocks-os.github.io/ai-maestro/) - Full documentation
 
 ## License
@@ -220,5 +253,5 @@ MIT - see [LICENSE](./LICENSE)
 
 <p align="center">
   <b>Made with ❤️ by <a href="https://github.com/23blocks-OS">23blocks</a></b><br>
-  <sub>Empowering teams to collaborate with AI agents</sub>
+  <sub>Supercharge your Claude Code workflow with Slack integration</sub>
 </p>
