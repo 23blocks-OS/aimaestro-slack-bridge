@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.3 - 2026-10-28
+## 0.2.0 - 2026-10-28 (behaviour change: external senders are wrapped; set OPERATOR_SLACK_IDS to your own Slack id to keep plain text)
 
 ### Security: untrusted content wrapper
 
