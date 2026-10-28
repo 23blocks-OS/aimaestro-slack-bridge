@@ -555,7 +555,7 @@ async function checkAgentResponses(): Promise<void> {
 
   try {
     const response = await fetch(
-      `${config.aimaestro.apiUrl}/api/messages?agent=${config.aimaestro.botAgent}&box=inbox&status=unread`,
+      `${config.aimaestro.apiUrl}/api/messages?agent=${encodeURIComponent(config.aimaestro.botAgent)}&box=inbox&status=unread`,
       { signal: AbortSignal.timeout(config.polling.timeoutMs) }
     );
 
@@ -581,7 +581,7 @@ async function processIncomingMessage(msgSummary: AIMessage): Promise<void> {
   try {
     // Fetch full message to get content
     const fullMsgResponse = await fetch(
-      `${config.aimaestro.apiUrl}/api/messages?agent=${config.aimaestro.botAgent}&id=${msgSummary.id}&box=inbox`,
+      `${config.aimaestro.apiUrl}/api/messages?agent=${encodeURIComponent(config.aimaestro.botAgent)}&id=${encodeURIComponent(msgSummary.id)}&box=inbox`,
       { signal: AbortSignal.timeout(config.polling.timeoutMs) }
     );
 
@@ -626,7 +626,7 @@ async function processIncomingMessage(msgSummary: AIMessage): Promise<void> {
 
     // Mark message as read
     await fetch(
-      `${config.aimaestro.apiUrl}/api/messages?agent=${config.aimaestro.botAgent}&id=${msg.id}&action=read`,
+      `${config.aimaestro.apiUrl}/api/messages?agent=${encodeURIComponent(config.aimaestro.botAgent)}&id=${encodeURIComponent(msg.id)}&action=read`,
       {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
