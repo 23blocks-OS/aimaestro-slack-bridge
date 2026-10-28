@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.1 - 2026-10-28
+## 0.1.2 - 2026-10-28
 
 ### Security: dependency and Node updates, 2026-10-28
 
