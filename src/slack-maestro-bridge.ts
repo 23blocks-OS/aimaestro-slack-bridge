@@ -1,5 +1,6 @@
 import { App } from '@slack/bolt';
 import * as dotenv from 'dotenv';
+import { loadSecurityConfig, sanitizeSlackMessage } from './content-security';
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ function loadConfig(): Config {
 }
 
 const config = loadConfig();
+const securityConfig = loadSecurityConfig();
 
 // =============================================================================
 // TYPES
@@ -502,18 +504,24 @@ async function sendToAgent(
   text: string,
   channel: string,
   thread_ts: string,
-  user: string
+  user: string,
+  userId: string
 ): Promise<void> {
+  // Slack text is untrusted unless the sender is listed in OPERATOR_SLACK_IDS.
+  const { sanitized, trust, flags } = sanitizeSlackMessage(text, userId, user, securityConfig);
+  if (trust.level === 'external' && flags.length > 0) {
+    log(`[security] ${flags.length} injection pattern(s) flagged in message from ${userId}: ${flags.map(f => f.category).join(', ')}`);
+  }
   const payload = {
     from: config.aimaestro.botAgent,
     fromHost: config.aimaestro.hostId,
     to: targetAgent,
     toHost: targetHost,
-    subject: `Slack: Message from ${user}`,
+    subject: `Slack: Message from ${user.replace(/[^\P{C}]|[\r\n]/gu, ' ').slice(0, 100)}`,
     priority: 'normal',
     content: {
       type: 'request',
-      message: text,
+      message: sanitized,
       slack: {
         channel,
         thread_ts,
@@ -697,7 +705,7 @@ async function routeMessage(
     });
   }
 
-  await sendToAgent(result.name, result.host, message, channel, thread_ts, userName);
+  await sendToAgent(result.name, result.host, message, channel, thread_ts, userName, userId);
 }
 
 // =============================================================================
