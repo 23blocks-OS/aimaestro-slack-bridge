@@ -176,6 +176,7 @@ Send a direct message to **AI Maestro** in Slack.
 | `SLACK_SIGNING_SECRET` | Yes | - | Signing secret |
 | `AIMAESTRO_API` | No | `http://127.0.0.1:23000` | AI Maestro API URL |
 | `DEFAULT_AGENT` | No | - | Default agent for messages |
+| `OPERATOR_SLACK_IDS` | No | empty | Comma-separated Slack user IDs (e.g. `U01ABC,U02DEF`) whose messages are trusted. Everyone else is external: their text is wrapped in an `<external-content ... trust="none">` block, flagged for prompt-injection patterns and stripped of control characters before it reaches the agent. Empty means all senders are external. |
 | `DEBUG` | No | `false` | Enable debug logging |
 
 ## Production Deployment
@@ -221,6 +222,8 @@ sudo systemctl start aimaestro-slack-bridge
 See [BACKLOG.md](./BACKLOG.md) for detailed plans.
 
 ## Security
+
+Slack text is untrusted input to an AI agent. Messages from senders not listed in `OPERATOR_SLACK_IDS` are delivered as `<external-content source="slack" sender="..." trust="none">` data blocks, with suspicious injection patterns called out inside the block. Set `OPERATOR_SLACK_IDS` to your own Slack user ID to keep plain messages for yourself.
 
 See [SECURITY.md](./SECURITY.md) for security policy and reporting vulnerabilities.
 

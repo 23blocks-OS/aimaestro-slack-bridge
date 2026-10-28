@@ -1,12 +1,13 @@
 {
   "name": "aimaestro-slack-bridge",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Slack bridge for AI Maestro - Connect Slack workspaces to AI Maestro agents",
   "main": "src/slack-maestro-bridge.ts",
   "scripts": {
     "start": "tsx src/slack-maestro-bridge.ts",
     "dev": "tsx watch src/slack-maestro-bridge.ts",
     "build": "tsc",
+    "test": "tsx --test src/*.test.ts",
     "prod": "node dist/slack-maestro-bridge.js"
   },
   "keywords": [
