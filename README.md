@@ -1,7 +1,7 @@
 # AI Maestro Slack Bridge
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Compatible-orange.svg)](https://claude.ai/code)
 [![AI Maestro](https://img.shields.io/badge/AI%20Maestro-Compatible-purple.svg)](https://github.com/23blocks-OS/ai-maestro)
@@ -90,7 +90,7 @@ Team Member (Slack)  ←  "🤖 [backend-api] All services healthy..."
 
 - [AI Maestro](https://github.com/23blocks-OS/ai-maestro) running (v0.18.0+)
 - Claude Code agents running in tmux sessions
-- Node.js 18+
+- Node.js 24 (or 22.23.4+)
 - Slack workspace with admin access
 
 ## Quick Start
